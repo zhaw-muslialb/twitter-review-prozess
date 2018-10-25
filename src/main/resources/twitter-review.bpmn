@@ -6,23 +6,24 @@
   <bpmn:process id="VerarbeitungVonTweetAnfragen" name="Verarbeitung von Tweet-Anfragen" isExecutable="true">
     <bpmn:laneSet id="LaneSet_07kaiz4">
       <bpmn:lane id="Lane_0c9xdey" name="Mitarbeiter">
-        <bpmn:flowNodeRef>TweetAnfrageEingereicht</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>TweetAnfrageUeberarbeiten</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>TweetAnfrageEingereicht</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>DreiTageAbgelaufenMitarbeiter</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="Lane_1iir6w0" name="Kommunikationsabteilung">
         <bpmn:flowNodeRef>ExclusiveGateway_1qa6x80</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>TweetAnfragePruefen</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>MitarbeiterKuerzelGenerieren</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>DreiTageAbgelaufenKommunikationsabteilung</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="Lane_1d0re29" name="Automatisch">
-        <bpmn:flowNodeRef>Pruefergebnis</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>ExclusiveGateway_0fj9kmh</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>TweetAnfrageBehandelt</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>TweetSenden</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>MitarbeiterBenachrichtigen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Pruefergebnis</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>TweetAnfrageBehandelt</bpmn:flowNodeRef>
       </bpmn:lane>
     </bpmn:laneSet>
-    <bpmn:sequenceFlow id="SequenceFlow_1vqcip2" sourceRef="TweetAnfrageEingereicht" targetRef="MitarbeiterKuerzelGenerieren" />
     <bpmn:startEvent id="TweetAnfrageEingereicht" name="Tweet-Anfrage&#10;eingereicht" camunda:asyncAfter="true" camunda:initiator="anfrageStellenderBenutzer">
       <bpmn:extensionElements>
         <camunda:formData>
@@ -32,39 +33,25 @@
       </bpmn:extensionElements>
       <bpmn:outgoing>SequenceFlow_1vqcip2</bpmn:outgoing>
     </bpmn:startEvent>
-    <bpmn:sequenceFlow id="SequenceFlow_1n9eamb" sourceRef="MitarbeiterKuerzelGenerieren" targetRef="ExclusiveGateway_1qa6x80" />
+    <bpmn:userTask id="TweetAnfrageUeberarbeiten" name="Tweet-Anfrage überarbeiten" camunda:assignee="${anfrageStellenderBenutzer}">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="tweetContent" label="Zu veröffentlichender Text" type="string" />
+          <camunda:formField id="checkResultComment" label="Hinweise für Mitarbeiter zum Prüfergebnis" type="string">
+            <camunda:properties>
+              <camunda:property id="disabled" />
+            </camunda:properties>
+          </camunda:formField>
+        </camunda:formData>
+      </bpmn:extensionElements>
+      <bpmn:incoming>ZuUeberarbeiten</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_1a9brpu</bpmn:outgoing>
+    </bpmn:userTask>
     <bpmn:exclusiveGateway id="ExclusiveGateway_1qa6x80">
       <bpmn:incoming>SequenceFlow_1a9brpu</bpmn:incoming>
       <bpmn:incoming>SequenceFlow_1n9eamb</bpmn:incoming>
       <bpmn:outgoing>SequenceFlow_0glyf4v</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:exclusiveGateway id="Pruefergebnis" name="Prüf-&#10;ergebnis?" default="Genehmigt">
-      <bpmn:incoming>SequenceFlow_1rlwf8z</bpmn:incoming>
-      <bpmn:outgoing>Abgelehnt</bpmn:outgoing>
-      <bpmn:outgoing>Genehmigt</bpmn:outgoing>
-      <bpmn:outgoing>ZuUeberarbeiten</bpmn:outgoing>
-    </bpmn:exclusiveGateway>
-    <bpmn:exclusiveGateway id="ExclusiveGateway_0fj9kmh">
-      <bpmn:incoming>SequenceFlow_13w0jnd</bpmn:incoming>
-      <bpmn:incoming>Abgelehnt</bpmn:incoming>
-      <bpmn:outgoing>SequenceFlow_0akgqts</bpmn:outgoing>
-    </bpmn:exclusiveGateway>
-    <bpmn:endEvent id="TweetAnfrageBehandelt" name="Tweet-Anfrage&#10;behandelt">
-      <bpmn:incoming>SequenceFlow_0wkf2cr</bpmn:incoming>
-    </bpmn:endEvent>
-    <bpmn:task id="TweetSenden" name="Tweet senden">
-      <bpmn:extensionElements>
-        <camunda:properties>
-          <camunda:property name="KPI-Ratio" value="Tweet Rejected" />
-        </camunda:properties>
-      </bpmn:extensionElements>
-      <bpmn:incoming>Genehmigt</bpmn:incoming>
-      <bpmn:outgoing>SequenceFlow_13w0jnd</bpmn:outgoing>
-    </bpmn:task>
-    <bpmn:task id="MitarbeiterBenachrichtigen" name="Mitarbeiter benachrichtigen">
-      <bpmn:incoming>SequenceFlow_0akgqts</bpmn:incoming>
-      <bpmn:outgoing>SequenceFlow_0wkf2cr</bpmn:outgoing>
-    </bpmn:task>
     <bpmn:userTask id="TweetAnfragePruefen" name="Tweet-Anfrage prüfen" camunda:candidateGroups="kommunikationsabteilung">
       <bpmn:extensionElements>
         <camunda:formData>
@@ -81,33 +68,6 @@
       <bpmn:incoming>SequenceFlow_0glyf4v</bpmn:incoming>
       <bpmn:outgoing>SequenceFlow_1rlwf8z</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:userTask id="TweetAnfrageUeberarbeiten" name="Tweet-Anfrage überarbeiten" camunda:assignee="${anfrageStellenderBenutzer}">
-      <bpmn:extensionElements>
-        <camunda:formData>
-          <camunda:formField id="tweetContent" label="Zu veröffentlichender Text" type="string" />
-          <camunda:formField id="checkResultComment" label="Hinweise für Mitarbeiter zum Prüfergebnis" type="string">
-            <camunda:properties>
-              <camunda:property id="disabled" />
-            </camunda:properties>
-          </camunda:formField>
-        </camunda:formData>
-      </bpmn:extensionElements>
-      <bpmn:incoming>ZuUeberarbeiten</bpmn:incoming>
-      <bpmn:outgoing>SequenceFlow_1a9brpu</bpmn:outgoing>
-    </bpmn:userTask>
-    <bpmn:sequenceFlow id="SequenceFlow_1a9brpu" sourceRef="TweetAnfrageUeberarbeiten" targetRef="ExclusiveGateway_1qa6x80" />
-    <bpmn:sequenceFlow id="SequenceFlow_0glyf4v" sourceRef="ExclusiveGateway_1qa6x80" targetRef="TweetAnfragePruefen" />
-    <bpmn:sequenceFlow id="SequenceFlow_1rlwf8z" sourceRef="TweetAnfragePruefen" targetRef="Pruefergebnis" />
-    <bpmn:sequenceFlow id="Abgelehnt" name="abgelehnt" sourceRef="Pruefergebnis" targetRef="ExclusiveGateway_0fj9kmh">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{checkResult == 'rejected'}</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Genehmigt" name="genehmigt" sourceRef="Pruefergebnis" targetRef="TweetSenden" />
-    <bpmn:sequenceFlow id="ZuUeberarbeiten" name="zu überarbeiten" sourceRef="Pruefergebnis" targetRef="TweetAnfrageUeberarbeiten">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{checkResult == 'revisable'}</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="SequenceFlow_13w0jnd" sourceRef="TweetSenden" targetRef="ExclusiveGateway_0fj9kmh" />
-    <bpmn:sequenceFlow id="SequenceFlow_0akgqts" sourceRef="ExclusiveGateway_0fj9kmh" targetRef="MitarbeiterBenachrichtigen" />
-    <bpmn:sequenceFlow id="SequenceFlow_0wkf2cr" sourceRef="MitarbeiterBenachrichtigen" targetRef="TweetAnfrageBehandelt" />
     <bpmn:scriptTask id="MitarbeiterKuerzelGenerieren" name="Mitarbeiter-Kürzel generieren" scriptFormat="JavaScript">
       <bpmn:incoming>SequenceFlow_1vqcip2</bpmn:incoming>
       <bpmn:outgoing>SequenceFlow_1n9eamb</bpmn:outgoing>
@@ -115,121 +75,214 @@
 var alias = emailAdress.substring(0,4);
 execution.setVariable("alias",alias);</bpmn:script>
     </bpmn:scriptTask>
+    <bpmn:exclusiveGateway id="Pruefergebnis" name="Prüf-&#10;ergebnis?" default="Genehmigt">
+      <bpmn:incoming>SequenceFlow_1rlwf8z</bpmn:incoming>
+      <bpmn:outgoing>Abgelehnt</bpmn:outgoing>
+      <bpmn:outgoing>Genehmigt</bpmn:outgoing>
+      <bpmn:outgoing>ZuUeberarbeiten</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="ExclusiveGateway_0fj9kmh">
+      <bpmn:incoming>SequenceFlow_13w0jnd</bpmn:incoming>
+      <bpmn:incoming>Abgelehnt</bpmn:incoming>
+      <bpmn:incoming>SequenceFlow_1u4q2mf</bpmn:incoming>
+      <bpmn:incoming>SequenceFlow_1blfe65</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_0akgqts</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="TweetAnfrageBehandelt" name="Tweet-Anfrage&#10;behandelt">
+      <bpmn:incoming>SequenceFlow_0wkf2cr</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="TweetSenden" name="Tweet senden" camunda:asyncBefore="true" camunda:delegateExpression="#{sendTweetAdapter}">
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="KPI-Ratio" value="Tweet Rejected" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Genehmigt</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_13w0jnd</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sendTask id="MitarbeiterBenachrichtigen" name="Mitarbeiter benachrichtigen" camunda:delegateExpression="#{notifyEmployeeAdapter}">
+      <bpmn:incoming>SequenceFlow_0akgqts</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_0wkf2cr</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:boundaryEvent id="DreiTageAbgelaufenKommunikationsabteilung" name="3 Tage abgelaufen" attachedToRef="TweetAnfragePruefen">
+      <bpmn:extensionElements>
+        <camunda:executionListener event="end">
+          <camunda:script scriptFormat="JavaScript">execution.setVariable("mailMainPart","Dieser konnte nicht veröffentlicht werden, weil er nicht durch die Kommunikationsabteilung innert 3 Tagen geprüft wurde.");</camunda:script>
+        </camunda:executionListener>
+      </bpmn:extensionElements>
+      <bpmn:outgoing>SequenceFlow_1u4q2mf</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10S</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="DreiTageAbgelaufenMitarbeiter" name="3 Tage abgelaufen" attachedToRef="TweetAnfrageUeberarbeiten">
+      <bpmn:extensionElements>
+        <camunda:executionListener event="end">
+          <camunda:script scriptFormat="JavaScript">execution.setVariable("mailMainPart","Dieser konnte nicht veröffentlicht werden, weil Du nicht innert 3 Tagen diesen überarbeitet hast.");</camunda:script>
+        </camunda:executionListener>
+      </bpmn:extensionElements>
+      <bpmn:outgoing>SequenceFlow_1blfe65</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10S</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="SequenceFlow_1vqcip2" sourceRef="TweetAnfrageEingereicht" targetRef="MitarbeiterKuerzelGenerieren" />
+    <bpmn:sequenceFlow id="ZuUeberarbeiten" name="zu überarbeiten" sourceRef="Pruefergebnis" targetRef="TweetAnfrageUeberarbeiten">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{checkResult == 'revisable'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="SequenceFlow_1a9brpu" sourceRef="TweetAnfrageUeberarbeiten" targetRef="ExclusiveGateway_1qa6x80" />
+    <bpmn:sequenceFlow id="SequenceFlow_1n9eamb" sourceRef="MitarbeiterKuerzelGenerieren" targetRef="ExclusiveGateway_1qa6x80" />
+    <bpmn:sequenceFlow id="SequenceFlow_0glyf4v" sourceRef="ExclusiveGateway_1qa6x80" targetRef="TweetAnfragePruefen" />
+    <bpmn:sequenceFlow id="SequenceFlow_1rlwf8z" sourceRef="TweetAnfragePruefen" targetRef="Pruefergebnis" />
+    <bpmn:sequenceFlow id="Abgelehnt" name="abgelehnt" sourceRef="Pruefergebnis" targetRef="ExclusiveGateway_0fj9kmh">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{checkResult == 'rejected'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Genehmigt" name="genehmigt" sourceRef="Pruefergebnis" targetRef="TweetSenden" />
+    <bpmn:sequenceFlow id="SequenceFlow_13w0jnd" sourceRef="TweetSenden" targetRef="ExclusiveGateway_0fj9kmh" />
+    <bpmn:sequenceFlow id="SequenceFlow_1u4q2mf" sourceRef="DreiTageAbgelaufenKommunikationsabteilung" targetRef="ExclusiveGateway_0fj9kmh" />
+    <bpmn:sequenceFlow id="SequenceFlow_1blfe65" sourceRef="DreiTageAbgelaufenMitarbeiter" targetRef="ExclusiveGateway_0fj9kmh" />
+    <bpmn:sequenceFlow id="SequenceFlow_0akgqts" sourceRef="ExclusiveGateway_0fj9kmh" targetRef="MitarbeiterBenachrichtigen" />
+    <bpmn:sequenceFlow id="SequenceFlow_0wkf2cr" sourceRef="MitarbeiterBenachrichtigen" targetRef="TweetAnfrageBehandelt" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_1y44tdo">
       <bpmndi:BPMNShape id="Participant_18e1752_di" bpmnElement="Participant_18e1752">
-        <dc:Bounds x="2" y="1" width="1122" height="517" />
+        <dc:Bounds x="2" y="1" width="1122" height="745" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="ExclusiveGateway_1qa6x80_di" bpmnElement="ExclusiveGateway_1qa6x80" isMarkerVisible="true">
-        <dc:Bounds x="305" y="187" width="50" height="50" />
+        <dc:Bounds x="305" y="255" width="50" height="50" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="StartEvent_0ki59ak_di" bpmnElement="TweetAnfrageEingereicht">
-        <dc:Bounds x="100" y="63" width="36" height="36" />
+        <dc:Bounds x="100" y="88" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="83" y="30" width="72" height="27" />
+          <dc:Bounds x="83" y="55" width="72" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="ExclusiveGateway_0cvdrda_di" bpmnElement="Pruefergebnis" isMarkerVisible="true">
-        <dc:Bounds x="554" y="326" width="50" height="50" />
+        <dc:Bounds x="554" y="477" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="523" y="368" width="49" height="27" />
+          <dc:Bounds x="523" y="519" width="49" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="ExclusiveGateway_0fj9kmh_di" bpmnElement="ExclusiveGateway_0fj9kmh" isMarkerVisible="true">
-        <dc:Bounds x="789" y="326" width="50" height="50" />
+        <dc:Bounds x="789" y="477" width="50" height="50" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="EndEvent_09yuv1z_di" bpmnElement="TweetAnfrageBehandelt">
-        <dc:Bounds x="1049" y="333" width="36" height="36" />
+        <dc:Bounds x="1049" y="484" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1032" y="376" width="72" height="27" />
+          <dc:Bounds x="1032" y="527" width="72" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="SequenceFlow_0wkf2cr_di" bpmnElement="SequenceFlow_0wkf2cr">
-        <di:waypoint x="990" y="351" />
-        <di:waypoint x="1049" y="351" />
+        <di:waypoint x="990" y="502" />
+        <di:waypoint x="1049" y="502" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="SequenceFlow_13w0jnd_di" bpmnElement="SequenceFlow_13w0jnd">
-        <di:waypoint x="745" y="458" />
-        <di:waypoint x="814" y="458" />
-        <di:waypoint x="814" y="376" />
+        <di:waypoint x="745" y="609" />
+        <di:waypoint x="814" y="609" />
+        <di:waypoint x="814" y="527" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="SequenceFlow_0akgqts_di" bpmnElement="SequenceFlow_0akgqts">
-        <di:waypoint x="839" y="351" />
-        <di:waypoint x="890" y="351" />
+        <di:waypoint x="839" y="502" />
+        <di:waypoint x="890" y="502" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="SequenceFlow_0iwyrih_di" bpmnElement="Abgelehnt">
-        <di:waypoint x="604" y="351" />
-        <di:waypoint x="789" y="351" />
+        <di:waypoint x="604" y="502" />
+        <di:waypoint x="789" y="502" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="613" y="331" width="49" height="14" />
+          <dc:Bounds x="613" y="482" width="49" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="SequenceFlow_0glyf4v_di" bpmnElement="SequenceFlow_0glyf4v">
-        <di:waypoint x="355" y="212" />
-        <di:waypoint x="394" y="212" />
+        <di:waypoint x="355" y="280" />
+        <di:waypoint x="394" y="280" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="SequenceFlow_1vqcip2_di" bpmnElement="SequenceFlow_1vqcip2">
-        <di:waypoint x="118" y="99" />
-        <di:waypoint x="118" y="212" />
-        <di:waypoint x="163" y="212" />
+        <di:waypoint x="118" y="124" />
+        <di:waypoint x="118" y="280" />
+        <di:waypoint x="163" y="280" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="SequenceFlow_0gmvlus_di" bpmnElement="Genehmigt">
-        <di:waypoint x="579" y="376" />
-        <di:waypoint x="579" y="458" />
-        <di:waypoint x="645" y="458" />
+        <di:waypoint x="579" y="527" />
+        <di:waypoint x="579" y="609" />
+        <di:waypoint x="645" y="609" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="584" y="438" width="52" height="14" />
+          <dc:Bounds x="584" y="589" width="52" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="SequenceFlow_123e4w3_di" bpmnElement="ZuUeberarbeiten">
-        <di:waypoint x="579" y="326" />
-        <di:waypoint x="579" y="81" />
-        <di:waypoint x="666" y="81" />
+        <di:waypoint x="579" y="477" />
+        <di:waypoint x="579" y="106" />
+        <di:waypoint x="666" y="106" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="552" y="61" width="77" height="14" />
+          <dc:Bounds x="552" y="86" width="77" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="Lane_0c9xdey_di" bpmnElement="Lane_0c9xdey">
-        <dc:Bounds x="32" y="1" width="1092" height="140" />
+        <dc:Bounds x="32" y="1" width="1092" height="208" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_1iir6w0_di" bpmnElement="Lane_1iir6w0">
-        <dc:Bounds x="32" y="141" width="1092" height="143" />
+        <dc:Bounds x="32" y="209" width="1092" height="194" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_1d0re29_di" bpmnElement="Lane_1d0re29">
-        <dc:Bounds x="32" y="284" width="1092" height="234" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_19ckxfd_di" bpmnElement="TweetSenden">
-        <dc:Bounds x="645" y="418" width="100" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_1ighy8a_di" bpmnElement="MitarbeiterBenachrichtigen">
-        <dc:Bounds x="890" y="311" width="100" height="80" />
+        <dc:Bounds x="32" y="403" width="1092" height="343" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="UserTask_0ivut5u_di" bpmnElement="TweetAnfragePruefen">
-        <dc:Bounds x="394" y="172" width="100" height="80" />
+        <dc:Bounds x="394" y="240" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="SequenceFlow_1rlwf8z_di" bpmnElement="SequenceFlow_1rlwf8z">
-        <di:waypoint x="494" y="212" />
-        <di:waypoint x="522" y="212" />
-        <di:waypoint x="522" y="351" />
-        <di:waypoint x="554" y="351" />
+        <di:waypoint x="494" y="280" />
+        <di:waypoint x="522" y="280" />
+        <di:waypoint x="522" y="502" />
+        <di:waypoint x="554" y="502" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="UserTask_13b1amu_di" bpmnElement="TweetAnfrageUeberarbeiten">
-        <dc:Bounds x="666" y="41" width="100" height="80" />
+        <dc:Bounds x="666" y="66" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="SequenceFlow_1a9brpu_di" bpmnElement="SequenceFlow_1a9brpu">
-        <di:waypoint x="716" y="41" />
-        <di:waypoint x="716" y="30" />
-        <di:waypoint x="330" y="30" />
-        <di:waypoint x="330" y="187" />
+        <di:waypoint x="716" y="66" />
+        <di:waypoint x="716" y="43" />
+        <di:waypoint x="330" y="43" />
+        <di:waypoint x="330" y="255" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="SequenceFlow_1n9eamb_di" bpmnElement="SequenceFlow_1n9eamb">
-        <di:waypoint x="263" y="212" />
-        <di:waypoint x="305" y="212" />
+        <di:waypoint x="263" y="280" />
+        <di:waypoint x="305" y="280" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="ScriptTask_1vk43n6_di" bpmnElement="MitarbeiterKuerzelGenerieren">
-        <dc:Bounds x="163" y="172" width="100" height="80" />
+        <dc:Bounds x="163" y="240" width="100" height="80" />
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_0rq658d_di" bpmnElement="TweetSenden">
+        <dc:Bounds x="645" y="569" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SendTask_0vbhpjw_di" bpmnElement="MitarbeiterBenachrichtigen">
+        <dc:Bounds x="890" y="462" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BoundaryEvent_13d1f5i_di" bpmnElement="DreiTageAbgelaufenKommunikationsabteilung">
+        <dc:Bounds x="399" y="302" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="336" y="307" width="55" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BoundaryEvent_0kvow7w_di" bpmnElement="DreiTageAbgelaufenMitarbeiter">
+        <dc:Bounds x="748" y="48" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="738" y="17" width="55" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_1u4q2mf_di" bpmnElement="SequenceFlow_1u4q2mf">
+        <di:waypoint x="417" y="338" />
+        <di:waypoint x="417" y="664" />
+        <di:waypoint x="861" y="664" />
+        <di:waypoint x="861" y="539" />
+        <di:waypoint x="828" y="513" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_1blfe65_di" bpmnElement="SequenceFlow_1blfe65">
+        <di:waypoint x="784" y="66" />
+        <di:waypoint x="847" y="66" />
+        <di:waypoint x="847" y="454" />
+        <di:waypoint x="817" y="480" />
+      </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>
